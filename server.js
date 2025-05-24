@@ -1,5 +1,4 @@
 const express = require('express');
-console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY);
 const axios = require('axios');
 const cors = require('cors');
 require('dotenv').config();
@@ -12,7 +11,12 @@ app.use(express.json());
 
 app.post('/api/chat', async (req, res) => {
   const { messages } = req.body;
-  console.log("OPENAI_API_KEY:", process.env.OPENAI_API_KEY); // ← this should NOT be undefined
+
+  if (!process.env.OPENAI_API_KEY) {
+    console.error("❌ OPENAI_API_KEY is missing in environment variables.");
+    return res.status(500).json({ error: 'Server misconfiguration: Missing API key.' });
+  }
+
   try {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
@@ -29,10 +33,18 @@ app.post('/api/chat', async (req, res) => {
     );
     res.json(response.data);
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("❌ Error from OpenAI:", error?.response?.data || error.message);
+    res.status(500).json({
+      error: 'Failed to fetch response from OpenAI.',
+      details: error?.response?.data || error.message,
+    });
   }
 });
 
+app.get('/', (req, res) => {
+  res.send('✅ Money & Minorities backend is running.');
+});
+
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-}); 
+  console.log(`✅ Server running on port ${PORT}`);
+});
